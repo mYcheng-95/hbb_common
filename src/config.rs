@@ -128,14 +128,25 @@ const CHARS: &[char] = &[
 // 并以环境变量形式传入（见主仓库 flutter-build.yml 顶层 env）；
 // 未注入时（公开仓库直接构建）回退官方公共默认值，保证仓库可独立构建。
 // 注意：当前仅支持单个服务器地址；将来需要多个时改为逗号分隔再拆分。
-pub const RENDEZVOUS_SERVERS: &[&str] = match option_env!("TA_RENDEZVOUS_SERVER") {
-    Some(v) => &[v],
-    None | Some("") => &["rs-ny.rustdesk.com"],
-};
-pub const RS_PUB_KEY: &str = match option_env!("TA_RS_PUB_KEY") {
-    Some(v) => v,
-    None | Some("") => "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=",
-};
+// Rust 1.75 的 const 求值不允许字符串模式匹配，也不对 match 绑定变量的
+// 临时数组做静态提升（E0015/E0716），因此用 const fn + usize 长度匹配判空。
+const fn pick_or(v: Option<&'static str>, fallback: &'static str) -> &'static str {
+    match v {
+        Some(s) => match s.len() {
+            0 => fallback,
+            _ => s,
+        },
+        None => fallback,
+    }
+}
+
+pub const RENDEZVOUS_SERVER: &str =
+    pick_or(option_env!("TA_RENDEZVOUS_SERVER"), "rs-ny.rustdesk.com");
+pub const RENDEZVOUS_SERVERS: &[&str] = &[RENDEZVOUS_SERVER];
+pub const RS_PUB_KEY: &str = pick_or(
+    option_env!("TA_RS_PUB_KEY"),
+    "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=",
+);
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
