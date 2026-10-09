@@ -79,7 +79,17 @@ lazy_static::lazy_static! {
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    // 构建期注入点：默认密码由 TA_DEFAULT_PASSWORD 注入（GitHub Secrets → CI 环境变量
+    // → option_env! 编译期常量）；未注入时无默认密码，避免固定凭据出现在公开仓库。
+    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        if let Some(pw) = option_env!("TA_DEFAULT_PASSWORD") {
+            if !pw.is_empty() {
+                map.insert("password".to_string(), pw.to_string());
+            }
+        }
+        RwLock::new(map)
+    };
     pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
 }
 
@@ -114,8 +124,18 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["rs-ny.rustdesk.com"];
-pub const RS_PUB_KEY: &str = "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=";
+// 构建期注入点：CI 从 GitHub Secrets 读取 TA_RENDEZVOUS_SERVER / TA_RS_PUB_KEY
+// 并以环境变量形式传入（见主仓库 flutter-build.yml 顶层 env）；
+// 未注入时（公开仓库直接构建）回退官方公共默认值，保证仓库可独立构建。
+// 注意：当前仅支持单个服务器地址；将来需要多个时改为逗号分隔再拆分。
+pub const RENDEZVOUS_SERVERS: &[&str] = match option_env!("TA_RENDEZVOUS_SERVER") {
+    Some(v) => &[v],
+    None | Some("") => &["rs-ny.rustdesk.com"],
+};
+pub const RS_PUB_KEY: &str = match option_env!("TA_RS_PUB_KEY") {
+    Some(v) => v,
+    None | Some("") => "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=",
+};
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
