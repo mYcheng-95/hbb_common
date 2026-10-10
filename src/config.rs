@@ -2398,7 +2398,7 @@ impl UserDefaultConfig {
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             keys::OPTION_VIEW_STYLE => self.get_string(key, "original", vec!["adaptive"]),
             keys::OPTION_SCROLL_STYLE => {
-                self.get_string(key, "scrollauto", vec!["scrolledge", "scrollbar"])
+                self.get_string(key, "scrollbar", vec!["scrolledge", "scrollauto"])
             }
             keys::OPTION_IMAGE_QUALITY => {
                 self.get_string(key, "balanced", vec!["best", "low", "custom"])
