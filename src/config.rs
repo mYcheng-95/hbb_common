@@ -68,8 +68,11 @@ lazy_static::lazy_static! {
     static ref TRUSTED_DEVICES: RwLock<(Vec<TrustedDevice>, bool)> = Default::default();
     static ref ONLINE: Mutex<HashMap<String, i64>> = Default::default();
     pub static ref PROD_RENDEZVOUS_SERVER: RwLock<String> = RwLock::new("".to_owned());
-    pub static ref EXE_RENDEZVOUS_SERVER: RwLock<String> = Default::default();
-    pub static ref APP_NAME: RwLock<String> = RwLock::new("RustDesk".to_owned());
+    // 构建期注入的服务器地址（TA_RENDEZVOUS_SERVER，优先级最高的 EXE 级）：
+    // 公司分发需要它压过用户配置文件中的历史值，未注入时保持空（原行为）。
+    pub static ref EXE_RENDEZVOUS_SERVER: RwLock<String> = RwLock::new(
+        pick_or(option_env!("TA_RENDEZVOUS_SERVER"), "").to_string());
+    pub static ref APP_NAME: RwLock<String> = RwLock::new("TaDesk".to_owned());
     static ref KEY_PAIR: Mutex<Option<KeyPair>> = Default::default();
     static ref USER_DEFAULT_CONFIG: RwLock<(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));
     pub static ref NEW_STORED_PEER_CONFIG: Mutex<HashSet<String>> = Default::default();
@@ -90,7 +93,11 @@ lazy_static::lazy_static! {
         }
         RwLock::new(map)
     };
-    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        map.insert("hide-powered-by-me".to_string(), "Y".to_string());
+        RwLock::new(map)
+    };
 }
 
 #[cfg(target_os = "android")]
